@@ -22,3 +22,6 @@ namespace Component {
 }
 
 export default Component
+
+// re-exports for additional extensibility
+export { componentFactory, VueClass };

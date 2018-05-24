@@ -227,5 +227,6 @@ function Component(options) {
 var Component$1 = Component;
 
 exports.default = Component$1;
+exports.componentFactory = componentFactory;
 exports.createDecorator = createDecorator;
 exports.mixins = mixins;
