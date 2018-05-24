@@ -2,4 +2,3 @@ node_modules
 example/build.js
 example/build.js.map
 test/test.build.js
-lib
