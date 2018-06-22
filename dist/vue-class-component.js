@@ -118,6 +118,9 @@ function componentFactory(Component, options) {
             return;
         }
         var descriptor = Object.getOwnPropertyDescriptor(proto, key);
+        if (!descriptor) {
+            return;
+        }
         if (typeof descriptor.value === 'function') {
             // methods
             (options.methods || (options.methods = {}))[key] = descriptor.value;

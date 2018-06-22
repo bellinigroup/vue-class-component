@@ -35,7 +35,12 @@ export function componentFactory (
       options[key] = proto[key]
       return
     }
+
     const descriptor = Object.getOwnPropertyDescriptor(proto, key)!
+    if (!descriptor) {
+      return
+    }
+
     if (typeof descriptor.value === 'function') {
       // methods
       (options.methods || (options.methods = {}))[key] = descriptor.value
