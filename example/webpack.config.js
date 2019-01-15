@@ -1,5 +1,9 @@
+const VueLoaderPlugin = require('vue-loader/lib/plugin')
+
 module.exports = {
-  entry: './example/example.ts',
+  mode: 'development',
+  context: __dirname,
+  entry: './src/main.ts',
   output: {
     path: __dirname,
     filename: 'build.js'
@@ -13,21 +17,17 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.ts$/,
-        exclude: /node_modules/,
-        use: {
-          loader: 'ts-loader',
-          options: {
-            appendTsSuffixTo: [/\.vue$/]
-          }
-        }
-      },
-      {
-        test: /\.tsx$/,
+        test: /\.tsx?$/,
         exclude: /node_modules/,
         use: [
           'babel-loader',
-          'ts-loader'
+          {
+            loader: 'ts-loader',
+            options: {
+              appendTsSuffixTo: [/\.vue$/],
+              appendTsxSuffixTo: [/\.vue$/]
+            }
+          }
         ]
       },
       {
@@ -36,5 +36,8 @@ module.exports = {
       }
     ]
   },
-  devtool: 'source-map'
+  devtool: 'source-map',
+  plugins: [
+    new VueLoaderPlugin()
+  ]
 }

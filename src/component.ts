@@ -1,4 +1,5 @@
 import Vue, { ComponentOptions } from 'vue'
+import { copyReflectionMetadata, reflectionIsSupported } from './reflect'
 import { VueClass, DecoratedClass } from './declarations'
 import { collectDataFromConstructor } from './data'
 import { hasProto, isPrimitive, warn } from './util'
@@ -30,6 +31,7 @@ export function componentFactory (
     if (key === 'constructor') {
       return
     }
+
     // hooks
     if ($internalHooks.indexOf(key) > -1) {
       options[key] = proto[key]
@@ -41,9 +43,18 @@ export function componentFactory (
       return
     }
 
-    if (typeof descriptor.value === 'function') {
+    if (descriptor.value !== void 0) {
       // methods
-      (options.methods || (options.methods = {}))[key] = descriptor.value
+      if (typeof descriptor.value === 'function') {
+        (options.methods || (options.methods = {}))[key] = descriptor.value
+      } else {
+        // typescript decorated data
+        (options.mixins || (options.mixins = [])).push({
+          data (this: Vue) {
+            return { [key]: descriptor.value }
+          }
+        })
+      }
     } else if (descriptor.get || descriptor.set) {
       // computed properties
       (options.computed || (options.computed = {}))[key] = {
@@ -76,6 +87,10 @@ export function componentFactory (
 
   forwardStaticMembers(Extended, Component, Super)
 
+  if (reflectionIsSupported) {
+    copyReflectionMetadata(Extended, Component)
+  }
+
   return Extended
 }
 
@@ -98,7 +113,11 @@ const reservedPropertyNames = [
   'filter'
 ]
 
-function forwardStaticMembers (Extended: typeof Vue, Original: typeof Vue, Super: typeof Vue): void {
+function forwardStaticMembers (
+  Extended: typeof Vue,
+  Original: typeof Vue,
+  Super: typeof Vue
+): void {
   // We have to use getOwnPropertyNames since Babel registers methods as non-enumerable
   Object.getOwnPropertyNames(Original).forEach(key => {
     // `prototype` should not be overwritten
@@ -122,7 +141,6 @@ function forwardStaticMembers (Extended: typeof Vue, Original: typeof Vue, Super
     // we can check equality of them and exclude it if they have the same reference.
     // If it is a primitive value, it will be forwarded for safety.
     if (!hasProto) {
-
       // Only `cid` is explicitly exluded from property forwarding
       // because we cannot detect whether it is a inherited property or not
       // on the no `__proto__` environment even though the property is reserved.
@@ -133,9 +151,9 @@ function forwardStaticMembers (Extended: typeof Vue, Original: typeof Vue, Super
       const superDescriptor = Object.getOwnPropertyDescriptor(Super, key)
 
       if (
-        !isPrimitive(descriptor.value)
-        && superDescriptor
-        && superDescriptor.value === descriptor.value
+        !isPrimitive(descriptor.value) &&
+        superDescriptor &&
+        superDescriptor.value === descriptor.value
       ) {
         return
       }
@@ -143,8 +161,8 @@ function forwardStaticMembers (Extended: typeof Vue, Original: typeof Vue, Super
 
     // Warn if the users manually declare reserved properties
     if (
-      process.env.NODE_ENV !== 'production'
-      && reservedPropertyNames.indexOf(key) >= 0
+      process.env.NODE_ENV !== 'production' &&
+      reservedPropertyNames.indexOf(key) >= 0
     ) {
       warn(
         `Static property name '${key}' declared on class '${Original.name}' ` +

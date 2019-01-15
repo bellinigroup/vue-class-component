@@ -1,10 +1,10 @@
+import 'reflect-metadata'
 import Component, { createDecorator, mixins } from '../lib'
 import { expect } from 'chai'
 import * as td from 'testdouble'
 import Vue, { ComputedOptions } from 'vue'
 
 describe('vue-class-component', () => {
-
   it('hooks', () => {
     let created = false
     let destroyed = false
@@ -58,6 +58,37 @@ describe('vue-class-component', () => {
     })
     expect(c.a).to.equal('hello')
     expect(c.b).to.equal(2)
+  })
+
+  it('data: should collect from decorated class properties', () => {
+    const valueDecorator = (value: any) => (_: any, __: any): any => {
+      return {
+        enumerable: true,
+        value
+      }
+    }
+
+    const getterDecorator = (value: any) => (_: any, __: any): any => {
+      return {
+        enumerable: true,
+        get () {
+          return value
+        }
+      }
+    }
+
+    @Component
+    class MyComp extends Vue {
+      @valueDecorator('field1')
+      field1!: string
+
+      @getterDecorator('field2')
+      field2!: string
+    }
+
+    const c = new MyComp()
+    expect(c.field1).to.equal('field1')
+    expect(c.field2).to.equal('field2')
   })
 
   it('data: should collect custom property defined on beforeCreate', () => {
@@ -313,7 +344,7 @@ describe('vue-class-component', () => {
     class MyComp extends Vue {
       static myValue = 52
 
-      static myFunc() {
+      static myFunc () {
         return 42
       }
     }
@@ -368,5 +399,31 @@ describe('vue-class-component', () => {
     vm.test()
     expect(vm.valueA).to.equal('hi')
     expect(vm.valueB).to.equal(456)
+  })
+
+  it('copies reflection metadata', function () {
+    @Component
+    @Reflect.metadata('worksConstructor', true)
+    class Test extends Vue {
+      @Reflect.metadata('worksStatic', true)
+      static staticValue: string = 'staticValue'
+
+      private _test: boolean = false
+
+      @Reflect.metadata('worksMethod', true)
+      test (): void {
+        void 0
+      }
+
+      @Reflect.metadata('worksAccessor', true)
+      get testAccessor (): boolean {
+        return this._test
+      }
+    }
+
+    expect(Reflect.getOwnMetadata('worksConstructor', Test)).to.equal(true)
+    expect(Reflect.getOwnMetadata('worksStatic', Test, 'staticValue')).to.equal(true)
+    expect(Reflect.getOwnMetadata('worksMethod', Test.prototype, 'test')).to.equal(true)
+    expect(Reflect.getOwnMetadata('worksAccessor', Test.prototype, 'testAccessor')).to.equal(true)
   })
 })

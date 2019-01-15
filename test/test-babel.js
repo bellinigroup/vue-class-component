@@ -1,3 +1,4 @@
+import 'reflect-metadata'
 import Component, { createDecorator, mixins } from '../lib'
 import { expect } from 'chai'
 import * as td from 'testdouble'
@@ -26,6 +27,37 @@ describe('vue-class-component with Babel', () => {
     expect(c.foo).to.equal('hello')
     expect(c.propValue).to.equal(1)
     expect(c.bar).to.equal(2)
+  })
+
+  it('should collect decorated class properties', () => {
+    const valueDecorator = (value) => () => {
+      return {
+        enumerable: true,
+        value: value
+      }
+    }
+
+    const getterDecorator = (value) => () => {
+      return {
+        enumerable: true,
+        get () {
+          return value
+        }
+      }
+    }
+
+    @Component
+    class MyComp extends Vue {
+      @valueDecorator('field1')
+      field1
+
+      @getterDecorator('field2')
+      field2
+    }
+
+    const c = new MyComp()
+    expect(c.field1).to.equal('field1')
+    expect(c.field2).to.equal('field2')
   })
 
   it('should not collect uninitialized class properties', () => {
@@ -147,5 +179,31 @@ describe('vue-class-component with Babel', () => {
     vm.test()
     expect(vm.valueA).to.equal('hi')
     expect(vm.valueB).to.equal(456)
+  })
+
+  it('copies reflection metadata', function () {
+    @Component
+    @Reflect.metadata('worksConstructor', true)
+    class Test extends Vue {
+      @Reflect.metadata('worksStatic', true)
+      static staticValue = 'staticValue'
+
+      _test = false
+
+      @Reflect.metadata('worksMethod', true)
+      test () {
+        void 0
+      }
+
+      @Reflect.metadata('worksAccessor', true)
+      get testAccessor () {
+        return this._test
+      }
+    }
+
+    expect(Reflect.getOwnMetadata('worksConstructor', Test)).to.equal(true)
+    expect(Reflect.getOwnMetadata('worksStatic', Test, 'staticValue')).to.equal(true)
+    expect(Reflect.getOwnMetadata('worksMethod', Test.prototype, 'test')).to.equal(true)
+    expect(Reflect.getOwnMetadata('worksAccessor', Test.prototype, 'testAccessor')).to.equal(true)
   })
 })
